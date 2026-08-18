@@ -1,16 +1,26 @@
 "use server";
 
+import { deleteBookCover, parseBookCoverInput } from "@/lib/book-covers";
 import { prisma } from "@/lib/prisma";
-import { parseCategories, type BookStatus } from "@/lib/books";
+import { BOOK_STATUSES, parseCategories, type BookStatus } from "@/lib/books";
 import { requireUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const bookStatusSchema = z.enum(["want_to_read", "reading", "finished"]);
+const bookStatusSchema = z.enum(BOOK_STATUSES);
+
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((value) => (value ? value : null));
 
 const bookInputSchema = z.object({
   title: z.string().trim().min(1).max(200),
-  author: z.string().trim().min(1).max(200),
+  subtitle: optionalText(200),
+  author: optionalText(200),
   pages: z
     .string()
     .trim()
@@ -25,17 +35,13 @@ const bookInputSchema = z.object({
     .string()
     .optional()
     .transform((value) => parseCategories(value ?? "")),
-  notes: z
-    .string()
-    .trim()
-    .max(2000)
-    .optional()
-    .transform((value) => (value ? value : null)),
+  notes: optionalText(2000),
 });
 
 function formDataToObject(formData: FormData) {
   return {
     title: String(formData.get("title") ?? ""),
+    subtitle: String(formData.get("subtitle") ?? ""),
     author: String(formData.get("author") ?? ""),
     pages: String(formData.get("pages") ?? ""),
     status: String(formData.get("status") ?? "want_to_read"),
@@ -53,14 +59,26 @@ export async function createBook(formData: FormData): Promise<BookActionResult> 
     return { ok: false, error: "تحقق من الحقول وأعد المحاولة." };
   }
 
+  let coverUrl: string | null = null;
+  try {
+    coverUrl = await parseBookCoverInput(formData, user.id, null);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "تعذّر حفظ صورة الغلاف.",
+    };
+  }
+
   await prisma.book.create({
     data: {
       title: parsed.data.title,
+      subtitle: parsed.data.subtitle,
       author: parsed.data.author,
       pages: parsed.data.pages,
       status: parsed.data.status as BookStatus,
       categories: parsed.data.categories,
       notes: parsed.data.notes,
+      coverUrl,
       userId: user.id,
     },
   });
@@ -86,15 +104,27 @@ export async function updateBook(
     return { ok: false, error: "الكتاب غير موجود." };
   }
 
+  let coverUrl = existing.coverUrl;
+  try {
+    coverUrl = await parseBookCoverInput(formData, user.id, existing.coverUrl);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "تعذّر حفظ صورة الغلاف.",
+    };
+  }
+
   await prisma.book.update({
     where: { id: bookId },
     data: {
       title: parsed.data.title,
+      subtitle: parsed.data.subtitle,
       author: parsed.data.author,
       pages: parsed.data.pages,
       status: parsed.data.status as BookStatus,
       categories: parsed.data.categories,
       notes: parsed.data.notes,
+      coverUrl,
     },
   });
 
@@ -105,9 +135,17 @@ export async function updateBook(
 export async function deleteBook(bookId: string) {
   const user = await requireUser();
 
-  await prisma.book.deleteMany({
+  const existing = await prisma.book.findFirst({
     where: { id: bookId, userId: user.id },
+    select: { coverUrl: true },
   });
+
+  if (existing) {
+    await deleteBookCover(existing.coverUrl);
+    await prisma.book.deleteMany({
+      where: { id: bookId, userId: user.id },
+    });
+  }
 
   revalidatePath("/library");
 }
@@ -135,12 +173,16 @@ export async function listBookFilterOptions() {
   const user = await requireUser();
   const rows = await prisma.book.findMany({
     where: { userId: user.id },
-    select: { author: true, categories: true, status: true, pages: true },
+    select: { author: true, categories: true, status: true },
   });
 
-  const authors = [...new Set(rows.map((row) => row.author).filter(Boolean))].sort(
-    (a, b) => a.localeCompare(b, "ar"),
-  );
+  const authors = [
+    ...new Set(
+      rows
+        .map((row) => row.author)
+        .filter((author): author is string => Boolean(author)),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "ar"));
   const categories = [
     ...new Set(rows.flatMap((row) => row.categories ?? [])),
   ].sort((a, b) => a.localeCompare(b, "ar"));
@@ -150,7 +192,8 @@ export async function listBookFilterOptions() {
     wantToRead: rows.filter((row) => row.status === "want_to_read").length,
     reading: rows.filter((row) => row.status === "reading").length,
     finished: rows.filter((row) => row.status === "finished").length,
-    pages: rows.reduce((sum, row) => sum + (row.pages ?? 0), 0),
+    readLater: rows.filter((row) => row.status === "read_later").length,
+    incomplete: rows.filter((row) => row.status === "incomplete").length,
   };
 
   return { authors, categories, stats };

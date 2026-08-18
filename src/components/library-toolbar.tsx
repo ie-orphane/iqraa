@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  BOOK_STATUS_BADGE,
   BOOK_STATUS_LABELS,
+  BOOK_STATUS_STAT_COUNT,
   BOOK_STATUSES,
 } from "@/lib/books";
 import type { BookStatus } from "@/lib/books";
@@ -30,7 +32,8 @@ export type LibraryStats = {
   wantToRead: number;
   reading: number;
   finished: number;
-  pages: number;
+  readLater: number;
+  incomplete: number;
 };
 
 function libraryHref(filters: {
@@ -49,25 +52,25 @@ function libraryHref(filters: {
 }
 
 export function LibraryStatsRow({ stats }: { stats: LibraryStats }) {
-  const items = [
-    { label: "كل الكتب", value: stats.total },
-    { label: "أقرأه الآن", value: stats.reading },
-    { label: "أنهيتها", value: stats.finished },
-    { label: "أريد قراءتها", value: stats.wantToRead },
-    { label: "الصفحات", value: stats.pages },
-  ];
-
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-      {items.map((item) => (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="rounded-xl border border-border bg-surface- px-3 py-3 text-center">
+        <p className="font-handjet text-2xl font-bold tabular-nums text-accent">
+          {stats.total}
+        </p>
+        <p className="mt-0.5 text-[11px] text-muted">كل الكتب</p>
+      </div>
+      {BOOK_STATUSES.map((status) => (
         <div
-          key={item.label}
-          className="rounded-xl border border-border bg-surface px-3 py-3 text-center"
+          key={status}
+          className={`rounded-xl px-3 py-3 text-center ${BOOK_STATUS_BADGE[status]}`}
         >
-          <p className="font-handjet text-2xl font-bold tabular-nums text-accent">
-            {item.value}
+          <p className="font-handjet text-2xl font-bold tabular-nums">
+            {stats[BOOK_STATUS_STAT_COUNT[status]]}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted">{item.label}</p>
+          <p className="mt-0.5 text-[11px] opacity-80">
+            {BOOK_STATUS_LABELS[status]}
+          </p>
         </div>
       ))}
     </div>

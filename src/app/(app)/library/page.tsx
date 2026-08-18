@@ -43,7 +43,6 @@ export default async function LibraryPage({
           >
             اقرأ
           </Link>
-          <p className="mt-1 text-sm text-muted">مكتبتك القرائية</p>
         </div>
 
         <div className="flex items-center gap-3">

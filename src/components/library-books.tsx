@@ -18,6 +18,7 @@ import {
   type LibraryStats,
 } from "@/components/library-toolbar";
 import type { Book } from "@prisma/client";
+import Image from "next/image";
 import {
   DotsThreeVertical,
   PencilSimple,
@@ -29,7 +30,15 @@ import { useEffect, useId, useRef, useState, useTransition } from "react";
 
 type BookFields = Pick<
   Book,
-  "id" | "title" | "author" | "pages" | "status" | "categories" | "notes"
+  | "id"
+  | "title"
+  | "subtitle"
+  | "author"
+  | "pages"
+  | "status"
+  | "categories"
+  | "notes"
+  | "coverUrl"
 >;
 
 export function LibraryBooks({
@@ -83,29 +92,80 @@ export function LibraryBooks({
           {books.map((book) => (
             <li
               key={book.id}
-              className={`rounded-xl border border-border bg-surface p-4 ${
+              className={`relative rounded-xl border border-border bg-surface p-4 ${
                 isGrid
-                  ? "relative flex flex-col gap-3"
-                  : "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                  ? "flex flex-col items-center gap-3 text-center"
+                  : "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
               }`}
             >
-              <div className={`min-w-0 ${isGrid ? "pe-10" : ""}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-medium text-foreground">
-                    {book.title}
-                  </p>
+              <div
+                className={
+                  isGrid
+                    ? "flex w-full flex-col items-center px-8"
+                    : "flex min-w-0 flex-1 items-start gap-3 pe-10 sm:pe-0"
+                }
+              >
+                {book.coverUrl ? (
+                  <div
+                    className={
+                      isGrid
+                        ? "mb-1 w-full max-w-28 overflow-hidden rounded-lg border border-border shadow-sm"
+                        : "w-20 shrink-0 overflow-hidden rounded-lg border border-border"
+                    }
+                  >
+                    <Image
+                      src={book.coverUrl}
+                      alt=""
+                      width={isGrid ? 112 : 80}
+                      height={isGrid ? 70 : 50}
+                      className="aspect-[1/1.6] w-full object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+                <div
+                  className={
+                    isGrid
+                      ? "flex w-full flex-col items-center"
+                      : "min-w-0 flex-1"
+                  }
+                >
+                {isGrid ? (
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${BOOK_STATUS_BADGE[book.status]}`}
                   >
                     {BOOK_STATUS_LABELS[book.status]}
                   </span>
+                ) : null}
+                <div
+                  className={`flex flex-wrap items-center gap-2 ${
+                    isGrid ? "mt-2 justify-center" : ""
+                  }`}
+                >
+                  <p className="font-medium text-foreground">{book.title}</p>
+                  {isGrid ? null : (
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${BOOK_STATUS_BADGE[book.status]}`}
+                    >
+                      {BOOK_STATUS_LABELS[book.status]}
+                    </span>
+                  )}
                 </div>
-                <p className="mt-1 truncate text-sm text-muted">{book.author}</p>
+                {book.subtitle ? (
+                  <p className="mt-1 text-sm text-muted">{book.subtitle}</p>
+                ) : null}
+                {book.author ? (
+                  <p className="mt-1 text-sm text-muted">{book.author}</p>
+                ) : null}
                 {book.pages ? (
                   <p className="mt-1 text-xs text-muted">{book.pages} صفحة</p>
                 ) : null}
                 {(book.categories ?? []).length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div
+                    className={`mt-2 flex flex-wrap gap-1.5 ${
+                      isGrid ? "justify-center" : ""
+                    }`}
+                  >
                     {(book.categories ?? []).map((category) => (
                       <span
                         key={category}
@@ -116,6 +176,7 @@ export function LibraryBooks({
                     ))}
                   </div>
                 ) : null}
+                </div>
               </div>
 
               <BookCardActions
@@ -133,6 +194,7 @@ export function LibraryBooks({
       {modal ? (
         <BookModal
           book={modal === "create" ? null : modal}
+          authors={authors}
           onClose={() => setModal(null)}
         />
       ) : null}
@@ -151,6 +213,40 @@ function BookCardActions({
   title: string;
   onEdit: () => void;
 }) {
+  if (layout === "list") {
+    return (
+      <>
+        <div className="hidden sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="تعديل"
+            title="تعديل"
+            className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground transition hover:bg-background"
+          >
+            <PencilSimple className="size-4" weight="bold" />
+          </button>
+          <DeleteBookButton bookId={bookId} title={title} />
+        </div>
+        <div className="sm:hidden">
+          <CardActionsMenu bookId={bookId} title={title} onEdit={onEdit} />
+        </div>
+      </>
+    );
+  }
+
+  return <CardActionsMenu bookId={bookId} title={title} onEdit={onEdit} />;
+}
+
+function CardActionsMenu({
+  bookId,
+  title,
+  onEdit,
+}: {
+  bookId: string;
+  title: string;
+  onEdit: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -164,23 +260,6 @@ function BookCardActions({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
-
-  if (layout === "list") {
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="تعديل"
-          title="تعديل"
-          className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground transition hover:bg-background"
-        >
-          <PencilSimple className="size-4" weight="bold" />
-        </button>
-        <DeleteBookButton bookId={bookId} title={title} />
-      </div>
-    );
-  }
 
   return (
     <div ref={menuRef} className="absolute end-3 top-3">
@@ -219,6 +298,81 @@ function BookCardActions({
   );
 }
 
+function DeleteConfirmModal({
+  title,
+  open,
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  open: boolean;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const onCancel = (event: Event) => {
+      event.preventDefault();
+      onClose();
+    };
+    dialog.addEventListener("cancel", onCancel);
+    return () => dialog.removeEventListener("cancel", onCancel);
+  }, [onClose]);
+
+  if (!open) return null;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      className="fixed inset-0 z-[60] m-0 flex h-full max-h-none w-full max-w-none items-center justify-center overflow-hidden bg-transparent p-4 backdrop:bg-black/40 open:flex"
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
+    >
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-xl">
+        <h2 id={titleId} className="text-lg font-semibold text-foreground">
+          حذف الكتاب
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          هل تريد حذف «{title}»؟ لا يمكن التراجع عن هذا الإجراء.
+        </p>
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onConfirm}
+            className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+          >
+            {pending ? "جاري الحذف..." : "حذف"}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onClose}
+            className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface disabled:opacity-60"
+          >
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
 function DeleteBookButton({
   bookId,
   title,
@@ -230,52 +384,156 @@ function DeleteBookButton({
   variant?: "icon" | "menu";
   onDone?: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  function onDelete() {
-    if (!confirm(`حذف «${title}»؟`)) return;
+  function requestDelete() {
     onDone?.();
+    setConfirmOpen(true);
+  }
+
+  function confirmDelete() {
     startTransition(async () => {
       await deleteBook(bookId);
+      setConfirmOpen(false);
     });
   }
 
-  if (variant === "menu") {
-    return (
-      <button
-        type="button"
-        disabled={pending}
-        onClick={onDelete}
-        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-      >
-        <TrashIcon className="size-4" weight="bold" />
-        حذف
-      </button>
-    );
+  return (
+    <>
+      {variant === "menu" ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={requestDelete}
+          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+        >
+          <TrashIcon className="size-4" weight="bold" />
+          حذف
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={pending}
+          aria-label="حذف"
+          title="حذف"
+          onClick={requestDelete}
+          className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+        >
+          <TrashIcon className="size-4" weight="bold" />
+        </button>
+      )}
+
+      <DeleteConfirmModal
+        title={title}
+        open={confirmOpen}
+        pending={pending}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmDelete}
+      />
+    </>
+  );
+}
+
+function BookCoverField({ existingUrl }: { existingUrl?: string | null }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(existingUrl ?? null);
+  const [removeCover, setRemoveCover] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
+  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (preview?.startsWith("blob:")) {
+      URL.revokeObjectURL(preview);
+    }
+    if (!file) {
+      setPreview(existingUrl ?? null);
+      setRemoveCover(false);
+      setCoverError(null);
+      return;
+    }
+    if (file.size > 11 * 1024 * 1024) {
+      event.target.value = "";
+      setPreview(existingUrl ?? null);
+      setCoverError("حجم الصورة كبير جدًا (الحد الأقصى 11 ميغابايت).");
+      return;
+    }
+    setCoverError(null);
+    setPreview(URL.createObjectURL(file));
+    setRemoveCover(false);
+  }
+
+  function onRemove() {
+    if (preview?.startsWith("blob:")) {
+      URL.revokeObjectURL(preview);
+    }
+    setPreview(null);
+    setRemoveCover(true);
+    if (inputRef.current) inputRef.current.value = "";
   }
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      aria-label="حذف"
-      title="حذف"
-      onClick={onDelete}
-      className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-    >
-      <TrashIcon className="size-4" weight="bold" />
-    </button>
+    <div className="flex flex-col gap-2 text-sm">
+      <span className="font-medium text-foreground">غلاف الكتاب</span>
+      {preview ? (
+        <div className="relative mx-auto w-20">
+          <div className="overflow-hidden rounded-lg border border-border shadow-sm">
+            <Image
+              src={preview}
+              alt=""
+              width={80}
+              height={50}
+              className="aspect-[1/1.6] w-full object-cover"
+              unoptimized
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="إزالة الغلاف"
+            title="إزالة الغلاف"
+            className="absolute -end-1.5 -top-1.5 inline-flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-sm transition hover:bg-red-50 hover:text-red-700"
+          >
+            <X className="size-3.5" weight="bold" />
+          </button>
+        </div>
+      ) : null}
+      <input
+        ref={inputRef}
+        type="file"
+        name="cover"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={onFileChange}
+        className="rounded-lg border border-border bg-background px-3 py-2 text-sm file:me-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-surface"
+      />
+      {removeCover ? <input type="hidden" name="removeCover" value="on" /> : null}
+      {coverError ? <p className="text-xs text-red-700">{coverError}</p> : null}
+      <span className="text-xs text-muted">
+        JPG أو PNG أو WebP — حتى 11 ميغابايت
+      </span>
+    </div>
   );
 }
 
 function BookModal({
   book,
+  authors,
   onClose,
 }: {
   book: BookFields | null;
+  authors: string[];
   onClose: () => void;
 }) {
   const titleId = useId();
+  const authorListId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -312,13 +570,13 @@ function BookModal({
   return (
     <dialog
       ref={dialogRef}
-      className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center bg-transparent p-4 backdrop:bg-black/40 open:flex"
+      className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center overflow-hidden bg-transparent p-4 backdrop:bg-black/40 open:flex"
       onClick={(event) => {
         if (event.target === dialogRef.current) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-xl sm:p-6">
-        <div className="mb-5 flex items-start justify-between gap-3">
+      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
           <h2 id={titleId} className="text-lg font-semibold text-foreground">
             {isEdit ? "تعديل كتاب" : "إضافة كتاب"}
           </h2>
@@ -334,14 +592,19 @@ function BookModal({
 
         <form
           action={submit}
-          className="flex flex-col gap-4"
+          encType="multipart/form-data"
+          className="flex min-h-0 flex-1 flex-col"
           aria-labelledby={titleId}
         >
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4">
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
               {error}
             </p>
           ) : null}
+
+          <BookCoverField existingUrl={book?.coverUrl} />
 
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="font-medium text-foreground">
@@ -356,15 +619,28 @@ function BookModal({
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-foreground">
-              الكاتب <span className="text-red-600">*</span>
-            </span>
+            <span className="font-medium text-foreground">العنوان الفرعي</span>
             <input
-              name="author"
-              required
-              defaultValue={book?.author ?? ""}
+              name="subtitle"
+              defaultValue={book?.subtitle ?? ""}
               className="rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-accent"
             />
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">الكاتب</span>
+            <input
+              name="author"
+              list={authorListId}
+              defaultValue={book?.author ?? ""}
+              autoComplete="off"
+              className="rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-accent"
+            />
+            <datalist id={authorListId}>
+              {authors.map((author) => (
+                <option key={author} value={author} />
+              ))}
+            </datalist>
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
@@ -417,8 +693,10 @@ function BookModal({
               className="resize-y rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-accent"
             />
           </label>
+            </div>
+          </div>
 
-          <div className="mt-1 flex gap-3">
+          <div className="flex shrink-0 gap-3 border-t border-border px-5 py-4 sm:px-6">
             <button
               type="submit"
               disabled={pending}

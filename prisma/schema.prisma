@@ -15,6 +15,8 @@ enum BookStatus {
   want_to_read
   reading
   finished
+  read_later
+  incomplete
 
   @@map("book_status")
 }
@@ -69,11 +71,13 @@ model Session {
 model Book {
   id          String     @id @default(cuid())
   title       String
-  author      String
+  subtitle    String?
+  author      String?
   pages       Int?
   status      BookStatus @default(want_to_read)
   categories  String[]   @default([])
   notes       String?
+  coverUrl    String?    @map("cover_url")
   userId      String     @map("user_id")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")

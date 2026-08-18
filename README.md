@@ -49,6 +49,8 @@ cp .env.example .env.local
 |----------|----------|--------|
 | `APP_URL` | Yes | App origin, no trailing slash needed. OAuth callbacks are derived from this. |
 | `DATABASE_URL` | Yes | Postgres connection string |
+| `SUPABASE_URL` | Yes | Supabase API URL (local: `http://127.0.0.1:54421`) |
+| `SUPABASE_SECRET_KEY` | Yes | Service role key for Storage uploads. Local: `bun run supabase:status` |
 | `DISCORD_CLIENT_ID` | Yes | Discord OAuth2 client ID |
 | `DISCORD_CLIENT_SECRET` | Yes | Discord OAuth2 client secret |
 | `TELEGRAM_CLIENT_ID` | Yes | Telegram Web Login client ID |
@@ -223,6 +225,8 @@ Register:
 |----------|--------|
 | `APP_URL` | `https://your-domain.com` |
 | `DATABASE_URL` | **Pooled** URL (`6543`, `pgbouncer=true`) used by the running app |
+| `SUPABASE_URL` | Hosted project URL (`https://<project>.supabase.co`) |
+| `SUPABASE_SECRET_KEY` | Hosted **service role** key (Storage uploads) |
 | `DISCORD_CLIENT_ID` | Production Discord client ID |
 | `DISCORD_CLIENT_SECRET` | Production Discord client secret |
 | `TELEGRAM_CLIENT_ID` | Telegram Web Login client ID |
@@ -275,5 +279,7 @@ Vercel sets `NODE_ENV=production` automatically.
 | Production / CI | `bun run db:migrate:deploy` |
 
 Prisma owns schema. Supabase Studio can browse data, but schema changes go through Prisma migrations committed to git.
+
+Book covers are stored in a public Supabase Storage bucket named `covers` (max 11MB). Local: defined in `supabase/config.toml`. Hosted: created automatically on first upload, or create it once in Storage.
 
 ---

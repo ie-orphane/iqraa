@@ -2,13 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@prisma/client", "@prisma/adapter-pg", "pg"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "11mb",
+    },
+    proxyClientMaxBodySize: "11mb",
+  },
   turbopack: {
     resolveAlias: {
       ".prisma/client/default": "./node_modules/.prisma/client/default.js",
     },
   },
   images: {
-    // WSL/DNS64 can resolve Discord CDN to NAT64 "private" IPv6; allowlisted hosts only.
     dangerouslyAllowLocalIP: true,
     remotePatterns: [
       {
@@ -26,6 +31,17 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "t.me",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "54421",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },
