@@ -1,32 +1,40 @@
-import { logout } from "@/actions/auth";
-import { listBooks } from "@/actions/books";
-import { StatusFilter } from "@/components/books";
+import { listBookFilterOptions, listBooks } from "@/actions/books";
 import { LibraryBooks } from "@/components/library-books";
-import { BOOK_STATUSES } from "@/lib/books";
+import { LogoutButton } from "@/components/logout-button";
+import { isBookStatus } from "@/lib/books";
 import { requireUser } from "@/lib/session";
-import type { BookStatus } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
-function parseStatus(value?: string): BookStatus | undefined {
-  if (!value) return undefined;
-  return BOOK_STATUSES.includes(value as BookStatus)
-    ? (value as BookStatus)
-    : undefined;
+function parseStatus(value?: string) {
+  if (!value || !isBookStatus(value)) return undefined;
+  return value;
 }
 
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    category?: string;
+    author?: string;
+    view?: string;
+  }>;
 }) {
   const user = await requireUser();
-  const { status: statusParam } = await searchParams;
-  const status = parseStatus(statusParam);
-  const books = await listBooks(status);
+  const params = await searchParams;
+  const status = parseStatus(params.status);
+  const category = params.category?.trim() || undefined;
+  const author = params.author?.trim() || undefined;
+  const view = params.view === "grid" ? "grid" : "list";
+
+  const [books, options] = await Promise.all([
+    listBooks({ status, category, author }),
+    listBookFilterOptions(),
+  ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-10">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link
@@ -49,20 +57,17 @@ export default async function LibraryPage({
               unoptimized
             />
           ) : null}
-          <form action={logout}>
-            <button
-              type="submit"
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium"
-            >
-              خروج
-            </button>
-          </form>
+          <LogoutButton />
         </div>
       </header>
 
-      <StatusFilter current={status ?? "all"} />
-
-      <LibraryBooks books={books} />
+      <LibraryBooks
+        books={books}
+        authors={options.authors}
+        categories={options.categories}
+        stats={options.stats}
+        filters={{ status, category, author, view }}
+      />
     </main>
   );
 }

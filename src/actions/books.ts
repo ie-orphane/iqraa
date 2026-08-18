@@ -1,8 +1,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { parseCategories, type BookStatus } from "@/lib/books";
 import { requireUser } from "@/lib/session";
-import { BookStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -21,6 +21,10 @@ const bookInputSchema = z.object({
       return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
     }),
   status: bookStatusSchema.default("want_to_read"),
+  categories: z
+    .string()
+    .optional()
+    .transform((value) => parseCategories(value ?? "")),
   notes: z
     .string()
     .trim()
@@ -35,6 +39,7 @@ function formDataToObject(formData: FormData) {
     author: String(formData.get("author") ?? ""),
     pages: String(formData.get("pages") ?? ""),
     status: String(formData.get("status") ?? "want_to_read"),
+    categories: String(formData.get("categories") ?? ""),
     notes: String(formData.get("notes") ?? ""),
   };
 }
@@ -54,6 +59,7 @@ export async function createBook(formData: FormData): Promise<BookActionResult> 
       author: parsed.data.author,
       pages: parsed.data.pages,
       status: parsed.data.status as BookStatus,
+      categories: parsed.data.categories,
       notes: parsed.data.notes,
       userId: user.id,
     },
@@ -87,32 +93,13 @@ export async function updateBook(
       author: parsed.data.author,
       pages: parsed.data.pages,
       status: parsed.data.status as BookStatus,
+      categories: parsed.data.categories,
       notes: parsed.data.notes,
     },
   });
 
   revalidatePath("/library");
   return { ok: true };
-}
-
-export async function updateBookStatus(bookId: string, formData: FormData) {
-  const user = await requireUser();
-  const status = bookStatusSchema.safeParse(
-    String(formData.get("status") ?? ""),
-  );
-  if (!status.success) return;
-
-  const existing = await prisma.book.findFirst({
-    where: { id: bookId, userId: user.id },
-  });
-  if (!existing) return;
-
-  await prisma.book.update({
-    where: { id: bookId },
-    data: { status: status.data as BookStatus },
-  });
-
-  revalidatePath("/library");
 }
 
 export async function deleteBook(bookId: string) {
@@ -125,13 +112,46 @@ export async function deleteBook(bookId: string) {
   revalidatePath("/library");
 }
 
-export async function listBooks(status?: BookStatus) {
+export async function listBooks(filters: {
+  status?: BookStatus;
+  category?: string;
+  author?: string;
+} = {}) {
   const user = await requireUser();
   return prisma.book.findMany({
     where: {
       userId: user.id,
-      ...(status ? { status } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.author ? { author: filters.author } : {}),
+      ...(filters.category
+        ? { categories: { has: filters.category } }
+        : {}),
     },
     orderBy: [{ updatedAt: "desc" }],
   });
+}
+
+export async function listBookFilterOptions() {
+  const user = await requireUser();
+  const rows = await prisma.book.findMany({
+    where: { userId: user.id },
+    select: { author: true, categories: true, status: true, pages: true },
+  });
+
+  const authors = [...new Set(rows.map((row) => row.author).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "ar"),
+  );
+  const categories = [
+    ...new Set(rows.flatMap((row) => row.categories ?? [])),
+  ].sort((a, b) => a.localeCompare(b, "ar"));
+
+  const stats = {
+    total: rows.length,
+    wantToRead: rows.filter((row) => row.status === "want_to_read").length,
+    reading: rows.filter((row) => row.status === "reading").length,
+    finished: rows.filter((row) => row.status === "finished").length,
+    pages: rows.reduce((sum, row) => sum + (row.pages ?? 0), 0),
+  };
+
+  return { authors, categories, stats };
 }

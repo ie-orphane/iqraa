@@ -9,9 +9,12 @@ export default async function Home() {
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center px-6 py-16">
       <div className="flex w-full max-w-lg flex-col items-center gap-6 text-center">
-        <h1 className="font-handjet text-5xl font-extrabold tracking-tight text-accent">
-          اقرأ
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-amiri text-3xl leading-relaxed text-accent sm:text-4xl">
+            ﴿ اقرَأ بِاسمِ رَبِّكَ الذِے خَلَق ﴾
+          </h1>
+          <p className="text-xs text-muted">[العلق: 1]</p>
+        </div>
 
         <p className="text-muted">
           تابع الكتب التي تريد قراءتها، والتي تقرأها الآن، والتي أنهيتها.

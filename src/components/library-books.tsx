@@ -6,84 +6,129 @@ import {
   updateBook,
   type BookActionResult,
 } from "@/actions/books";
-import { BookStatusSelect } from "@/components/book-status-select";
-import { BOOK_STATUS_LABELS, BOOK_STATUSES } from "@/lib/books";
+import {
+  BOOK_STATUS_BADGE,
+  BOOK_STATUS_LABELS,
+  BOOK_STATUSES,
+} from "@/lib/books";
+import {
+  LibraryStatsRow,
+  LibraryToolbar,
+  type LibraryFilters,
+  type LibraryStats,
+} from "@/components/library-toolbar";
 import type { Book } from "@prisma/client";
 import {
+  DotsThreeVertical,
   PencilSimple,
-  Plus,
-  Trash,
+  PlusIcon,
+  TrashIcon,
   X,
 } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 
-type BookFields = Pick<Book, "id" | "title" | "author" | "pages" | "status" | "notes">;
+type BookFields = Pick<
+  Book,
+  "id" | "title" | "author" | "pages" | "status" | "categories" | "notes"
+>;
 
-export function LibraryBooks({ books }: { books: Book[] }) {
+export function LibraryBooks({
+  books,
+  filters,
+  authors,
+  categories,
+  stats,
+}: {
+  books: Book[];
+  filters: LibraryFilters;
+  authors: string[];
+  categories: string[];
+  stats: LibraryStats;
+}) {
   const [modal, setModal] = useState<"create" | BookFields | null>(null);
+  const isGrid = filters.view === "grid";
 
   return (
     <>
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setModal("create")}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-surface transition hover:opacity-90"
-        >
-          <Plus weight="bold" className="size-4" />
-          إضافة كتاب
-        </button>
-      </div>
+      <div className="flex flex-col gap-4">
+      <LibraryStatsRow stats={stats} />
+
+      <LibraryToolbar
+        filters={filters}
+        authors={authors}
+        categories={categories}
+        onAdd={() => setModal("create")}
+      />
 
       {books.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-surface/60 px-6 py-12 text-center">
-          <p className="text-muted">لا توجد كتب بعد.</p>
+          <p className="text-muted">لا توجد كتب مطابقة.</p>
           <button
             type="button"
             onClick={() => setModal("create")}
             className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-surface"
           >
-            <Plus weight="bold" className="size-4" />
+            <PlusIcon weight="bold" className="size-4" />
             أضف كتابًا
           </button>
         </div>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+        <ul
+          className={
+            isGrid
+              ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+              : "flex flex-col gap-3"
+          }
+        >
           {books.map((book) => (
             <li
               key={book.id}
-              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+              className={`rounded-xl border border-border bg-surface p-4 ${
+                isGrid
+                  ? "relative flex flex-col gap-3"
+                  : "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              }`}
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium text-foreground">
-                  {book.title}
-                </p>
-                <p className="truncate text-sm text-muted">{book.author}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {book.pages ? `${book.pages} صفحة · ` : null}
-                  {BOOK_STATUS_LABELS[book.status]}
-                </p>
+              <div className={`min-w-0 ${isGrid ? "pe-10" : ""}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate font-medium text-foreground">
+                    {book.title}
+                  </p>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${BOOK_STATUS_BADGE[book.status]}`}
+                  >
+                    {BOOK_STATUS_LABELS[book.status]}
+                  </span>
+                </div>
+                <p className="mt-1 truncate text-sm text-muted">{book.author}</p>
+                {book.pages ? (
+                  <p className="mt-1 text-xs text-muted">{book.pages} صفحة</p>
+                ) : null}
+                {(book.categories ?? []).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(book.categories ?? []).map((category) => (
+                      <span
+                        key={category}
+                        className="rounded-full border border-border bg-background px-2 py-0.5 text-[11px] text-muted"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <BookStatusSelect bookId={book.id} status={book.status} />
-
-                <button
-                  type="button"
-                  onClick={() => setModal(book)}
-                  aria-label="تعديل"
-                  title="تعديل"
-                  className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground transition hover:bg-background"
-                >
-                  <PencilSimple className="size-4" weight="bold" />
-                </button>
-
-                <DeleteBookButton bookId={book.id} title={book.title} />
-              </div>
+              <BookCardActions
+                layout={isGrid ? "grid" : "list"}
+                bookId={book.id}
+                title={book.title}
+                onEdit={() => setModal(book)}
+              />
             </li>
           ))}
         </ul>
       )}
+      </div>
 
       {modal ? (
         <BookModal
@@ -95,14 +140,119 @@ export function LibraryBooks({ books }: { books: Book[] }) {
   );
 }
 
+function BookCardActions({
+  layout,
+  bookId,
+  title,
+  onEdit,
+}: {
+  layout: "list" | "grid";
+  bookId: string;
+  title: string;
+  onEdit: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  if (layout === "list") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label="تعديل"
+          title="تعديل"
+          className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground transition hover:bg-background"
+        >
+          <PencilSimple className="size-4" weight="bold" />
+        </button>
+        <DeleteBookButton bookId={bookId} title={title} />
+      </div>
+    );
+  }
+
+  return (
+    <div ref={menuRef} className="absolute end-3 top-3">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-label="إجراءات"
+        title="إجراءات"
+        aria-expanded={open}
+        className="inline-flex size-8 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground"
+      >
+        <DotsThreeVertical className="size-5" weight="bold" />
+      </button>
+      {open ? (
+        <div className="absolute end-0 top-full z-10 mt-1 min-w-36 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onEdit();
+            }}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-background"
+          >
+            <PencilSimple className="size-4" weight="bold" />
+            تعديل
+          </button>
+          <DeleteBookButton
+            bookId={bookId}
+            title={title}
+            variant="menu"
+            onDone={() => setOpen(false)}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function DeleteBookButton({
   bookId,
   title,
+  variant = "icon",
+  onDone,
 }: {
   bookId: string;
   title: string;
+  variant?: "icon" | "menu";
+  onDone?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+
+  function onDelete() {
+    if (!confirm(`حذف «${title}»؟`)) return;
+    onDone?.();
+    startTransition(async () => {
+      await deleteBook(bookId);
+    });
+  }
+
+  if (variant === "menu") {
+    return (
+      <button
+        type="button"
+        disabled={pending}
+        onClick={onDelete}
+        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+      >
+        <TrashIcon className="size-4" weight="bold" />
+        حذف
+      </button>
+    );
+  }
 
   return (
     <button
@@ -110,15 +260,10 @@ function DeleteBookButton({
       disabled={pending}
       aria-label="حذف"
       title="حذف"
-      onClick={() => {
-        if (!confirm(`حذف «${title}»؟`)) return;
-        startTransition(async () => {
-          await deleteBook(bookId);
-        });
-      }}
+      onClick={onDelete}
       className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 disabled:opacity-60"
     >
-      <Trash className="size-4" weight="bold" />
+      <TrashIcon className="size-4" weight="bold" />
     </button>
   );
 }
@@ -187,7 +332,11 @@ function BookModal({
           </button>
         </div>
 
-        <form action={submit} className="flex flex-col gap-4" aria-labelledby={titleId}>
+        <form
+          action={submit}
+          className="flex flex-col gap-4"
+          aria-labelledby={titleId}
+        >
           {error ? (
             <p className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
               {error}
@@ -195,7 +344,9 @@ function BookModal({
           ) : null}
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-foreground">عنوان الكتاب</span>
+            <span className="font-medium text-foreground">
+              عنوان الكتاب <span className="text-red-600">*</span>
+            </span>
             <input
               name="title"
               required
@@ -205,7 +356,9 @@ function BookModal({
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-foreground">الكاتب</span>
+            <span className="font-medium text-foreground">
+              الكاتب <span className="text-red-600">*</span>
+            </span>
             <input
               name="author"
               required
@@ -226,7 +379,9 @@ function BookModal({
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-foreground">الحالة</span>
+            <span className="font-medium text-foreground">
+              الحالة <span className="text-red-600">*</span>
+            </span>
             <select
               name="status"
               defaultValue={book?.status ?? "want_to_read"}
@@ -238,6 +393,19 @@ function BookModal({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-foreground">التصنيفات</span>
+            <input
+              name="categories"
+              defaultValue={(book?.categories ?? []).join("، ")}
+              placeholder="رواية، تاريخ، فقه"
+              className="rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:border-accent"
+            />
+            <span className="text-xs text-muted">
+              افصل بين التصنيفات بفاصلة
+            </span>
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">

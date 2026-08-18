@@ -67,16 +67,17 @@ model Session {
 }
 
 model Book {
-  id        String     @id @default(cuid())
-  title     String
-  author    String
-  pages     Int?
-  status    BookStatus @default(want_to_read)
-  notes     String?
-  userId    String     @map("user_id")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  title       String
+  author      String
+  pages       Int?
+  status      BookStatus @default(want_to_read)
+  categories  String[]   @default([])
+  notes       String?
+  userId      String     @map("user_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, status])

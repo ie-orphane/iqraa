@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
-import { Handjet, Tajawal } from "next/font/google";
+import { Amiri, Handjet, Tajawal } from "next/font/google";
 import "./globals.css";
+
+const amiri = Amiri({
+  weight: ["400", "700"],
+  subsets: ["arabic"],
+  variable: "--font-amiri",
+  display: "swap",
+});
 
 const handjet = Handjet({
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -30,7 +37,7 @@ export default function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${handjet.variable} ${tajawal.variable} h-full antialiased`}
+      className={`${amiri.variable} ${handjet.variable} ${tajawal.variable} h-full antialiased`}
     >
       {/* Browser extensions (e.g. ColorZilla) inject attrs like cz-shortcut-listen on <body> */}
       <body
