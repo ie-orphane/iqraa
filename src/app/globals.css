@@ -41,6 +41,13 @@ body {
   font-family: var(--font-tajawal), "Segoe UI", Tahoma, sans-serif;
 }
 
+button {
+  cursor: pointer;
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
 .landing-hero {
   background:
     radial-gradient(ellipse 80% 60% at 20% 20%, #ebe3d6 0%, transparent 55%),

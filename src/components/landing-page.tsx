@@ -1,7 +1,7 @@
 import { BookStatusIcon } from "@/components/book-status-icon";
 import { BOOK_STATUS_BADGE, BOOK_STATUS_LABELS } from "@/lib/books";
 import type { BookStatus } from "@/lib/books";
-import { NotebookIcon, StackIcon, TagIcon } from "@phosphor-icons/react/ssr";
+import { NotebookIcon, PencilSimpleIcon, StackIcon, TagIcon, TrashIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
 const whyItems = [
@@ -64,7 +64,7 @@ export function LandingPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <section className="landing-hero relative flex min-h-dvh flex-col overflow-hidden">
+      <section className="landing-hero relative flex min-h-[calc(100dvh-160px)] flex-col overflow-hidden">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 landing-hero-glow"
@@ -74,21 +74,23 @@ export function LandingPage({
           className="landing-hero-books pointer-events-none absolute inset-y-0 inset-s-0 w-full max-w-xl sm:max-w-2xl"
         />
 
-        <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
-          <p className="font-handjet text-2xl font-extrabold text-accent">
-            اقرأ
-          </p>
-          <Link
-            href={headerActionHref}
-            className="text-sm font-medium text-muted transition hover:text-foreground"
-          >
-            {headerActionLabel}
-          </Link>
-        </header>
+        <div className="px-6 py-6 sm:px-10">
+          <header className=" flex items-center justify-between max-w-5xl w-full mx-auto">
+            <p className="font-handjet text-2xl font-extrabold text-accent">
+              اقرأ
+            </p>
+            <Link
+              href={headerActionHref}
+              className="text-sm font-medium text-muted transition hover:text-foreground"
+            >
+              {headerActionLabel}
+            </Link>
+          </header>
+        </div>
 
         <div className="relative z-10 flex flex-1 flex-col justify-center px-6 pb-20 pt-8 sm:px-10">
           <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
-            <p className="landing-fade-up landing-delay-1 font-amiri text-4xl leading-relaxed text-muted sm:text-5xl">
+            <p className="landing-fade-up landing-delay-1 font-amiri text-3xl leading-relaxed text-muted sm:text-5xl">
               ﴿ اقرَأ بِاسمِ رَبِّكَ الذِے خَلَق ﴾
               <span className="ms-2 align-middle font-tajawal text-xs">
                 [العلق: 1]
@@ -213,6 +215,20 @@ export function LandingPage({
                       {book.author}
                     </p>
                   </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="inline-flex size-9 items-center justify-center rounded-md border border-border text-foreground"
+                    >
+                      <PencilSimpleIcon className="size-4" weight="bold" />
+                    </span>
+                    <span
+                      aria-hidden
+                      className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700"
+                    >
+                      <TrashIcon className="size-4" weight="bold" />
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -235,21 +251,19 @@ export function LandingPage({
       </section>
 
       <footer className="border-t border-border px-6 py-8 sm:px-10">
-        <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted">© 2026 اقرأ</p>
-          <div className="flex flex-col gap-1 text-sm text-muted sm:items-end">
-            <p>
-              صمم من طرف{" "}
-              <a
-                href="https://github.com/siraj-devs"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-foreground transition hover:text-accent"
-              >
-                sirajdevs
-              </a>
-            </p>
-          </div>
+        <div className="mx-auto flex max-w-5xl items-center gap-4 text-sm text-muted justify-between">
+          <p>© 2026 اقرأ</p>
+          <p>
+            صمم من طرف{" "}
+            <a
+              href="https://github.com/siraj-devs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground transition hover:text-accent"
+            >
+              sirajdevs
+            </a>
+          </p>
         </div>
       </footer>
     </div>
