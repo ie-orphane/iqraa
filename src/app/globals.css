@@ -29,8 +29,97 @@ html {
   color-scheme: light;
 }
 
+/* Keep Western digits even with Arabic UI locale */
+.tabular-nums,
+.font-handjet {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-tajawal), "Segoe UI", Tahoma, sans-serif;
+}
+
+.landing-hero {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, #ebe3d6 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 80%, #e4d9c8 0%, transparent 50%),
+    linear-gradient(165deg, #f7f2ea 0%, #f3eee6 45%, #ebe4d8 100%);
+}
+
+.landing-hero-glow {
+  background:
+    radial-gradient(circle at 70% 30%, rgb(74 59 47 / 0.06), transparent 40%),
+    radial-gradient(circle at 15% 75%, rgb(74 59 47 / 0.04), transparent 35%);
+}
+
+.landing-hero-books {
+  background-image:
+    linear-gradient(90deg, transparent 0%, rgb(74 59 47 / 0.03) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 18px,
+      rgb(74 59 47 / 0.07) 18px,
+      rgb(74 59 47 / 0.07) 28px,
+      transparent 28px,
+      transparent 40px,
+      rgb(74 59 47 / 0.05) 40px,
+      rgb(74 59 47 / 0.05) 52px,
+      transparent 52px,
+      transparent 70px
+    );
+  mask-image: linear-gradient(90deg, transparent, black 25%, black 70%, transparent);
+  opacity: 0.55;
+  animation: landing-books-drift 28s linear infinite;
+}
+
+@keyframes landing-books-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 0 0, 120px 0;
+  }
+}
+
+@keyframes landing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-fade-up {
+  animation: landing-fade-up 0.8s ease-out both;
+}
+
+.landing-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.landing-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.landing-delay-3 {
+  animation-delay: 0.36s;
+}
+
+.landing-glimpse {
+  animation: landing-fade-up 0.9s ease-out both;
+  box-shadow: 0 18px 40px rgb(47 41 34 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-books,
+  .landing-fade-up,
+  .landing-glimpse {
+    animation: none;
+  }
 }

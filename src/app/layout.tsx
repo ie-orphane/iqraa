@@ -25,7 +25,8 @@ const tajawal = Tajawal({
 
 export const metadata: Metadata = {
   title: "اقرأ",
-  description: "تتبع الكتب التي تقرأها",
+  description:
+    "مكتبتك القرائية في مكان واحد — تابع ما تقرأ وما أنهيت وما تنتظر.",
 };
 
 export default function RootLayout({
