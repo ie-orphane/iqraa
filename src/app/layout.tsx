@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
 import { Amiri, Handjet, Tajawal } from "next/font/google";
 import "./globals.css";
@@ -40,12 +41,15 @@ export default function RootLayout({
       dir="rtl"
       className={`${amiri.variable} ${handjet.variable} ${tajawal.variable} h-full antialiased`}
     >
-      {/* Browser extensions (e.g. ColorZilla) inject attrs like cz-shortcut-listen on <body> */}
+      <head>
+        <meta name="apple-mobile-web-app-title" content="اقرأ" />
+      </head>
       <body
         className="flex min-h-full flex-col bg-background font-tajawal text-foreground"
         suppressHydrationWarning
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
