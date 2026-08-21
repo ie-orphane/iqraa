@@ -1,9 +1,8 @@
 import { listBookFilterOptions, listBooks } from "@/actions/books";
 import { LibraryBooks } from "@/components/library-books";
-import { LogoutButton } from "@/components/logout-button";
+import { UserMenu } from "@/components/user-menu";
 import { isBookStatus } from "@/lib/books";
 import { requireUser } from "@/lib/session";
-import Image from "next/image";
 import Link from "next/link";
 
 function parseStatus(value?: string) {
@@ -18,6 +17,7 @@ export default async function LibraryPage({
     status?: string;
     category?: string;
     author?: string;
+    q?: string;
     view?: string;
   }>;
 }) {
@@ -26,10 +26,11 @@ export default async function LibraryPage({
   const status = parseStatus(params.status);
   const category = params.category?.trim() || undefined;
   const author = params.author?.trim() || undefined;
+  const q = params.q?.trim() || undefined;
   const view = params.view === "grid" ? "grid" : "list";
 
   const [books, options] = await Promise.all([
-    listBooks({ status, category, author }),
+    listBooks({ status, category, author, q }),
     listBookFilterOptions(),
   ]);
 
@@ -45,19 +46,11 @@ export default async function LibraryPage({
           </Link>
         </div>
 
-        <div className="flex items-center gap-3">
-          {user.image ? (
-            <Image
-              src={user.image}
-              alt=""
-              width={36}
-              height={36}
-              className="size-9 rounded-full"
-              unoptimized
-            />
-          ) : null}
-          <LogoutButton />
-        </div>
+        <UserMenu
+          name={user.name}
+          username={user.username}
+          image={user.image}
+        />
       </header>
 
       <LibraryBooks
@@ -65,7 +58,7 @@ export default async function LibraryPage({
         authors={options.authors}
         categories={options.categories}
         stats={options.stats}
-        filters={{ status, category, author, view }}
+        filters={{ status, category, author, q, view }}
       />
     </main>
   );

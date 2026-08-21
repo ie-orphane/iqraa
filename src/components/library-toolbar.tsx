@@ -1,5 +1,6 @@
 "use client";
 
+import { BookStatusIcon, TotalBooksIcon } from "@/components/book-status-icon";
 import {
   BOOK_STATUS_BADGE,
   BOOK_STATUS_LABELS,
@@ -8,15 +9,16 @@ import {
 } from "@/lib/books";
 import type { BookStatus } from "@/lib/books";
 import {
-  Funnel,
-  FunnelSimple,
+  FunnelIcon,
+  FunnelSimpleIcon,
+  MagnifyingGlassIcon,
   PlusIcon,
-  SquaresFour,
-  Rows,
+  SquaresFourIcon,
+  RowsIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type LibraryView = "list" | "grid";
 
@@ -24,6 +26,7 @@ export type LibraryFilters = {
   status?: BookStatus;
   category?: string;
   author?: string;
+  q?: string;
   view: LibraryView;
 };
 
@@ -40,12 +43,14 @@ function libraryHref(filters: {
   status?: string;
   category?: string;
   author?: string;
+  q?: string;
   view?: LibraryView;
 }) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
   if (filters.category) params.set("category", filters.category);
   if (filters.author) params.set("author", filters.author);
+  if (filters.q?.trim()) params.set("q", filters.q.trim());
   if (filters.view && filters.view !== "list") params.set("view", filters.view);
   const query = params.toString();
   return query ? `/library?${query}` : "/library";
@@ -54,22 +59,30 @@ function libraryHref(filters: {
 export function LibraryStatsRow({ stats }: { stats: LibraryStats }) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <div className="rounded-xl border border-border bg-surface- px-3 py-3 text-center">
+      <div className="rounded-xl border border-border px-3 py-4 text-center">
         <p className="font-handjet text-2xl font-bold tabular-nums text-accent">
           {stats.total}
         </p>
-        <p className="mt-0.5 text-[11px] text-muted">كل الكتب</p>
+        <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-muted">
+          <span>
+            <TotalBooksIcon className="size-4" />
+          </span>
+          <span>كل الكتب</span>
+        </p>
       </div>
       {BOOK_STATUSES.map((status) => (
         <div
           key={status}
-          className={`rounded-xl px-3 py-3 text-center ${BOOK_STATUS_BADGE[status]}`}
+          className={`rounded-xl px-3 py-5 text-center ${BOOK_STATUS_BADGE[status]}`}
         >
           <p className="font-handjet text-2xl font-bold tabular-nums">
             {stats[BOOK_STATUS_STAT_COUNT[status]]}
           </p>
-          <p className="mt-0.5 text-[11px] opacity-80">
-            {BOOK_STATUS_LABELS[status]}
+          <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] opacity-80">
+            <span>
+              <BookStatusIcon status={status} className="size-4" />
+            </span>
+            <span>{BOOK_STATUS_LABELS[status]}</span>
           </p>
         </div>
       ))}
@@ -90,12 +103,50 @@ export function LibraryToolbar({
 }) {
   const router = useRouter();
   const hasFilters = Boolean(
-    filters.status || filters.category || filters.author,
+    filters.status || filters.category || filters.author || filters.q,
   );
   const [open, setOpen] = useState(hasFilters);
-  const extraCount = [filters.status, filters.category, filters.author].filter(
-    Boolean,
-  ).length;
+  const searchKey = filters.q ?? "";
+  const [query, setQuery] = useState(searchKey);
+  const [syncedKey, setSyncedKey] = useState(searchKey);
+  if (searchKey !== syncedKey) {
+    setSyncedKey(searchKey);
+    setQuery(searchKey);
+  }
+  const extraCount = [
+    filters.status,
+    filters.category,
+    filters.author,
+    filters.q,
+  ].filter(Boolean).length;
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    const current = searchKey.trim();
+    if (trimmed === current) return;
+
+    const timeout = window.setTimeout(() => {
+      router.push(
+        libraryHref({
+          status: filters.status,
+          category: filters.category,
+          author: filters.author,
+          view: filters.view,
+          q: trimmed || undefined,
+        }),
+      );
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    query,
+    searchKey,
+    filters.status,
+    filters.category,
+    filters.author,
+    filters.view,
+    router,
+  ]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -111,7 +162,7 @@ export function LibraryToolbar({
                 : "bg-surface text-muted hover:text-foreground"
             }`}
           >
-            <Rows className="size-4" weight="bold" />
+            <RowsIcon className="size-4" weight="bold" />
           </Link>
           <Link
             href={libraryHref({ ...filters, view: "grid" })}
@@ -123,7 +174,7 @@ export function LibraryToolbar({
                 : "bg-surface text-muted hover:text-foreground"
             }`}
           >
-            <SquaresFour className="size-4" weight="bold" />
+            <SquaresFourIcon className="size-4" weight="bold" />
           </Link>
         </div>
 
@@ -140,13 +191,13 @@ export function LibraryToolbar({
         >
           {extraCount ? (
             <span className="relative inline-flex">
-              <FunnelSimple className="size-4" weight="bold" />
+              <FunnelSimpleIcon className="size-4" weight="bold" />
               <span className="absolute -start-1.5 -top-1.5 grid size-3.5 place-items-center rounded-full bg-accent text-[9px] text-surface">
                 {extraCount}
               </span>
             </span>
           ) : (
-            <Funnel className="size-4" weight="bold" />
+            <FunnelIcon className="size-4" weight="bold" />
           )}
         </button>
 
@@ -162,7 +213,24 @@ export function LibraryToolbar({
       </div>
 
       {open ? (
-        <div className="grid gap-3 rounded-xl border border-border bg-surface p-3 sm:grid-cols-3">
+        <div className="grid gap-3 rounded-xl border border-border bg-surface p-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1 text-xs font-medium text-foreground sm:col-span-2 lg:col-span-4">
+            بحث
+            <span className="relative">
+              <MagnifyingGlassIcon
+                className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                weight="bold"
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="ابحث في العنوان، الكاتب، الملاحظات..."
+                className="w-full rounded-lg border border-border bg-background py-2 pe-3 ps-9 text-sm font-normal outline-none focus:border-accent"
+              />
+            </span>
+          </label>
+
           <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
             الحالة
             <select
@@ -209,7 +277,7 @@ export function LibraryToolbar({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-foreground">
+          <label className="flex flex-col gap-1 text-xs font-medium text-foreground sm:col-span-2 lg:col-span-2">
             التصنيف
             <select
               value={filters.category ?? ""}

@@ -154,8 +154,11 @@ export async function listBooks(filters: {
   status?: BookStatus;
   category?: string;
   author?: string;
+  q?: string;
 } = {}) {
   const user = await requireUser();
+  const q = filters.q?.trim();
+
   return prisma.book.findMany({
     where: {
       userId: user.id,
@@ -163,6 +166,16 @@ export async function listBooks(filters: {
       ...(filters.author ? { author: filters.author } : {}),
       ...(filters.category
         ? { categories: { has: filters.category } }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { subtitle: { contains: q, mode: "insensitive" } },
+              { author: { contains: q, mode: "insensitive" } },
+              { notes: { contains: q, mode: "insensitive" } },
+            ],
+          }
         : {}),
     },
     orderBy: [{ updatedAt: "desc" }],

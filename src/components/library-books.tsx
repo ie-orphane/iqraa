@@ -7,7 +7,6 @@ import {
   type BookActionResult,
 } from "@/actions/books";
 import {
-  BOOK_STATUS_BADGE,
   BOOK_STATUS_LABELS,
   BOOK_STATUSES,
 } from "@/lib/books";
@@ -17,6 +16,7 @@ import {
   type LibraryFilters,
   type LibraryStats,
 } from "@/components/library-toolbar";
+import { BookStatusBadge } from "@/components/book-status-icon";
 import type { Book } from "@prisma/client";
 import Image from "next/image";
 import {
@@ -26,6 +26,7 @@ import {
   TrashIcon,
   X,
 } from "@phosphor-icons/react";
+import { createPortal } from "react-dom";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 
 type BookFields = Pick<
@@ -130,26 +131,14 @@ export function LibraryBooks({
                       : "min-w-0 flex-1"
                   }
                 >
-                {isGrid ? (
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${BOOK_STATUS_BADGE[book.status]}`}
-                  >
-                    {BOOK_STATUS_LABELS[book.status]}
-                  </span>
-                ) : null}
+                {isGrid ? <BookStatusBadge status={book.status} /> : null}
                 <div
                   className={`flex flex-wrap items-center gap-2 ${
                     isGrid ? "mt-2 justify-center" : ""
                   }`}
                 >
                   <p className="font-medium text-foreground">{book.title}</p>
-                  {isGrid ? null : (
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${BOOK_STATUS_BADGE[book.status]}`}
-                    >
-                      {BOOK_STATUS_LABELS[book.status]}
-                    </span>
-                  )}
+                  {isGrid ? null : <BookStatusBadge status={book.status} />}
                 </div>
                 {book.subtitle ? (
                   <p className="mt-1 text-sm text-muted">{book.subtitle}</p>
@@ -248,6 +237,8 @@ function CardActionsMenu({
   onEdit: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -261,40 +252,63 @@ function CardActionsMenu({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
+  function confirmDelete() {
+    startTransition(async () => {
+      await deleteBook(bookId);
+      setConfirmOpen(false);
+    });
+  }
+
   return (
-    <div ref={menuRef} className="absolute end-3 top-3">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-label="إجراءات"
-        title="إجراءات"
-        aria-expanded={open}
-        className="inline-flex size-8 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground"
-      >
-        <DotsThreeVertical className="size-5" weight="bold" />
-      </button>
-      {open ? (
-        <div className="absolute end-0 top-full z-10 mt-1 min-w-36 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onEdit();
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-background"
-          >
-            <PencilSimple className="size-4" weight="bold" />
-            تعديل
-          </button>
-          <DeleteBookButton
-            bookId={bookId}
-            title={title}
-            variant="menu"
-            onDone={() => setOpen(false)}
-          />
-        </div>
-      ) : null}
-    </div>
+    <>
+      <div ref={menuRef} className="absolute end-3 top-3">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-label="إجراءات"
+          title="إجراءات"
+          aria-expanded={open}
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-foreground"
+        >
+          <DotsThreeVertical className="size-5" weight="bold" />
+        </button>
+        {open ? (
+          <div className="absolute end-0 top-full z-10 mt-1 min-w-36 overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground transition hover:bg-background"
+            >
+              <PencilSimple className="size-4" weight="bold" />
+              تعديل
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setOpen(false);
+                setConfirmOpen(true);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              <TrashIcon className="size-4" weight="bold" />
+              حذف
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <DeleteConfirmModal
+        title={title}
+        open={confirmOpen}
+        pending={pending}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={confirmDelete}
+      />
+    </>
   );
 }
 
@@ -311,39 +325,36 @@ function DeleteConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
   }, [open]);
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const onCancel = (event: Event) => {
-      event.preventDefault();
-      onClose();
-    };
-    dialog.addEventListener("cancel", onCancel);
-    return () => dialog.removeEventListener("cancel", onCancel);
-  }, [onClose]);
+  if (!mounted || !open) return null;
 
-  if (!open) return null;
-
-  return (
-    <dialog
-      ref={dialogRef}
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-0 z-[60] m-0 flex h-full max-h-none w-full max-w-none items-center justify-center overflow-hidden bg-transparent p-4 backdrop:bg-black/40 open:flex"
-      onClick={(event) => {
-        if (event.target === dialogRef.current) onClose();
-      }}
+      className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
     >
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-xl">
+      <div
+        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h2 id={titleId} className="text-lg font-semibold text-foreground">
           حذف الكتاب
         </h2>
@@ -369,28 +380,20 @@ function DeleteConfirmModal({
           </button>
         </div>
       </div>
-    </dialog>
+    </div>,
+    document.body,
   );
 }
 
 function DeleteBookButton({
   bookId,
   title,
-  variant = "icon",
-  onDone,
 }: {
   bookId: string;
   title: string;
-  variant?: "icon" | "menu";
-  onDone?: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-
-  function requestDelete() {
-    onDone?.();
-    setConfirmOpen(true);
-  }
 
   function confirmDelete() {
     startTransition(async () => {
@@ -401,28 +404,16 @@ function DeleteBookButton({
 
   return (
     <>
-      {variant === "menu" ? (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={requestDelete}
-          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-        >
-          <TrashIcon className="size-4" weight="bold" />
-          حذف
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled={pending}
-          aria-label="حذف"
-          title="حذف"
-          onClick={requestDelete}
-          className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-        >
-          <TrashIcon className="size-4" weight="bold" />
-        </button>
-      )}
+      <button
+        type="button"
+        disabled={pending}
+        aria-label="حذف"
+        title="حذف"
+        onClick={() => setConfirmOpen(true)}
+        className="inline-flex size-9 items-center justify-center rounded-md border border-red-200 text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+      >
+        <TrashIcon className="size-4" weight="bold" />
+      </button>
 
       <DeleteConfirmModal
         title={title}
