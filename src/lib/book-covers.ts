@@ -2,9 +2,10 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { MAX_COVER_BYTES } from "@/lib/book-covers-shared";
 
 export const COVER_BUCKET = "covers";
-export const MAX_COVER_BYTES = 11 * 1024 * 1024;
+export { MAX_COVER_BYTES };
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 

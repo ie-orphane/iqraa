@@ -1,8 +1,14 @@
 "use client";
 
 import { logout } from "@/actions/auth";
-import { SignOutIcon, UserIcon } from "@phosphor-icons/react";
+import {
+  BooksIcon,
+  ListIcon,
+  SignOutIcon,
+  UserIcon,
+} from "@phosphor-icons/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export function UserMenu({
@@ -54,7 +60,7 @@ export function UserMenu({
       </button>
 
       {open ? (
-        <div className="absolute end-0 top-full z-20 mt-2 min-w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
+        <div className="absolute inset-e-0 top-full z-20 mt-2 min-w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg">
           <div className="border-b border-border px-3 py-2">
             <p className="truncate text-sm font-medium text-foreground">
               {label}
@@ -63,6 +69,22 @@ export function UserMenu({
               <p className="truncate text-xs text-muted">@{username}</p>
             ) : null}
           </div>
+          <Link
+            href="/library"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-foreground transition hover:bg-background"
+          >
+            <BooksIcon className="size-4" weight="bold" />
+            المكتبة
+          </Link>
+          <Link
+            href="/lists"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-foreground transition hover:bg-background"
+          >
+            <ListIcon className="size-4" weight="bold" />
+            قوائمي
+          </Link>
           <form action={logout}>
             <button
               type="submit"

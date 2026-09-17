@@ -31,6 +31,7 @@ model User {
   connections Connection[]
   sessions    Session[]
   books       Book[]
+  bookLists   BookList[]
 
   @@map("users")
 }
@@ -69,21 +70,59 @@ model Session {
 }
 
 model Book {
-  id          String     @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   subtitle    String?
   author      String?
   pages       Int?
-  status      BookStatus @default(want_to_read)
-  categories  String[]   @default([])
+  status      BookStatus     @default(want_to_read)
+  categories  String[]       @default([])
   notes       String?
-  coverUrl    String?    @map("cover_url")
-  userId      String     @map("user_id")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coverUrl    String?        @map("cover_url")
+  userId      String         @map("user_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listItems   BookListItem[]
 
   @@index([userId])
   @@index([userId, status])
   @@map("books")
+}
+
+model BookList {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  publicId    String         @unique @map("public_id")
+  isPublic    Boolean        @default(false) @map("is_public")
+  userId      String         @map("user_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       BookListItem[]
+
+  @@index([userId])
+  @@map("book_lists")
+}
+
+model BookListItem {
+  id        String   @id @default(cuid())
+  listId    String   @map("list_id")
+  bookId    String?  @map("book_id")
+  position  Int      @default(0)
+  title     String?
+  subtitle  String?
+  author    String?
+  pages     Int?
+  coverUrl  String?  @map("cover_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  list      BookList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  book      Book?    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, bookId])
+  @@index([listId])
+  @@index([bookId])
+  @@map("book_list_items")
 }
